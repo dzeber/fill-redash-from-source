@@ -1,36 +1,15 @@
-import sys, os, json
+import sys, os
 import argparse
-import urllib2
 import time
 import pprint
 import yaml
+from utils import RequestHandler
 
 base_url = "https://sql.telemetry.mozilla.org/api/"
 recheck_frequency = 1
 
-def check_or_update_list(queries, user_api_key):
-    def api_get(*path):
-        url = base_url + '/'.join(map(str, path))
-        r = urllib2.Request(url)
-        r.add_header('Authorization', 'Key ' + user_api_key)
-        fd = urllib2.urlopen(r)
-        return json.load(fd)
-
-    def api_post(d, *path):
-        url = base_url + '/'.join(map(str, path))
-        r = urllib2.Request(url, json.dumps(d))
-        r.add_header('Authorization', 'Key ' + user_api_key)
-        r.add_header('Content-Type', 'application/json;charset=utf-8')
-
-        try:
-            fd = urllib2.urlopen(r)
-        except urllib2.HTTPError, e:
-            print >>sys.stderr, "HTTP response"
-            print >>sys.stderr, e.read()
-            raise
-        return json.load(fd)
-
-    datasources = api_get('data_sources')
+def check_or_update_list(queries, handler):
+    datasources = handler.api_get('data_sources')
     dsmap = {}
     for ds in datasources:
         dsmap[ds['name']] = ds
@@ -45,7 +24,7 @@ def check_or_update_list(queries, user_api_key):
 
         updates = {}
 
-        r = api_get('queries', id)
+        r = handler.api_get('queries', id)
         if r['name'] != name:
             updates['name'] = name
         if r['data_source_id'] != dsmap[ds]['id']:
@@ -64,7 +43,7 @@ def check_or_update_list(queries, user_api_key):
         # If the query has changed, we need to generate a new result set
         # and then associate it with the query
         if 'query' in updates:
-            r = api_post({
+            r = handler.api_post({
                 'data_source_id': dsmap[ds]['id'],
                 'max_age': 0,
                 'query': qs,
@@ -74,7 +53,7 @@ def check_or_update_list(queries, user_api_key):
             print "[{}] Updating query: status at {}job/{}".format(id, base_url, job_id)
             while r['job']['status'] in (1, 2):
                 time.sleep(recheck_frequency)
-                r = api_get('jobs', job_id)
+                r = handler.api_get('jobs', job_id)
                 print "*",
                 sys.stdout.flush()
             print
@@ -84,7 +63,7 @@ def check_or_update_list(queries, user_api_key):
             # do I need to update query_hash? updates['query_hash'] = r['
 
         print "[{}] {}: Updating {}".format(id, name, ','.join(updates.keys()))
-        api_post(updates, 'queries', id)
+        handler.api_post(updates, 'queries', id)
 
     for q in queries:
         check_or_update_query(q)
@@ -96,4 +75,5 @@ if __name__ == "__main__":
     args = a.parse_args()
 
     d = yaml.load(open(args.manifest))
-    check_or_update_list(d['queries'], args.apikey)
+    api_handler = RequestHandler(args.apikey)
+    check_or_update_list(d['queries'], api_handler)
