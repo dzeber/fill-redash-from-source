@@ -69,10 +69,28 @@ def check_or_update_list(queries, handler):
         check_or_update_query(q)
 
 if __name__ == "__main__":
-    a = argparse.ArgumentParser(description="Update sql.telemetry.mozilla.org queries")
-    a.add_argument("manifest", metavar="manifest.yaml", help="Path to autogen.yaml")
-    a.add_argument("apikey", help="Your sql.telemetry.mozilla.org API key")
+    a = argparse.ArgumentParser(
+        description="Update sql.telemetry.mozilla.org queries")
+    a.add_argument("manifest",
+        metavar="manifest.yaml",
+        help="Path to YAML file specifying queries")
+    a.add_argument("apikey",
+        help="Your sql.telemetry.mozilla.org API key, either the key itself" +
+            " or a single-line file containing the key (with the --keyfile" +
+            " option)")
+    a.add_argument("--keyfile", "-k",
+        action = "store_true",
+        help="Interpret the apikey arg as the path to a single-line file" +
+            " containing the key")
     args = a.parse_args()
+    if args.keyfile:
+        try:
+            with open(args.apikey) as f:
+                apikey = f.read().strip()
+            args.apikey = apikey
+        except IOError:
+            print("Unable to read API key from file.")
+            sys.exit(1)
 
     d = yaml.load(open(args.manifest))
     api_handler = RequestHandler(args.apikey)
