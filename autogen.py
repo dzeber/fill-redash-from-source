@@ -3,16 +3,13 @@ import argparse
 import time
 import pprint
 import yaml
-from utils import RequestHandler
+import utils
 
 base_url = "https://sql.telemetry.mozilla.org/api/"
 recheck_frequency = 1
 
 def check_or_update_list(queries, handler):
-    datasources = handler.api_get('data_sources')
-    dsmap = {}
-    for ds in datasources:
-        dsmap[ds['name']] = ds
+    dsmap = handler.get_data_sources_by_name()
 
     def check_or_update_query(q):
         id = q['id']
