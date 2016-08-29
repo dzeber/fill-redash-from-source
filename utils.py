@@ -55,3 +55,60 @@ class RequestHandler:
             raise
         return json.load(fd)
 
+
+    def get_data_sources_by_name(self):
+        """ Returns a mapping of known data sources keyed by name. """
+        datasources = self.api_get("data_sources")
+        dsmap = {}
+        for ds in datasources:
+            dsmap[ds["name"]] = ds
+        return dsmap
+
+    def get_data_sources_by_id(self):
+        """ Returns a mapping of known data sources keyed by ID. """
+        datasources = self.api_get("data_sources")
+        dsmap = {}
+        for ds in datasources:
+            dsmap[ds["id"]] = ds
+        return dsmap
+
+
+def remove_vis_dates(v):
+    """ Remove dates from the visualization description returned by the API. """
+    del v["created_at"]
+    del v["updated_at"]
+    return v
+
+
+def format_vis_for_manifest(visualizations):
+    """ Convert the visualization listing for a query returned by the API
+        into the format that will get written to the manifest.
+
+        We only need to record the information necessary to recreate the
+        visualization. Dates of creation and update are removed. Also,
+        visualizations of type "TABLE" are ignored, since they are the default.
+    """
+    visualizations = filter(lambda v: v["type"] != "TABLE", visualizations)
+    visualizations = map(remove_vis_dates, visualizations)
+    return visualizations
+
+
+def block_multiline_string_representer(dumper, data):
+    """ Represent multi-line strings in block style.
+
+        CF http://stackoverflow.com/a/33300001
+    """
+    ## Check for multiline string.
+    if len(data.splitlines()) > 1:
+        ## If any of the lines have trailing spaces, the string will
+        ## not get printed in block style.
+        ## If the Emitter will not allow block style output, print a
+        ## warning.
+        if not dumper.analyze_scalar(data).allow_block:
+            print("The following multi-line string will not be printed" +
+                " in block style - check that no lines have trailing" +
+                " spaces.\n" + repr(data))
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data,
+            style='|')
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+
