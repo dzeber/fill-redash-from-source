@@ -79,11 +79,12 @@ if __name__ == "__main__":
             " or a single-line file containing the key (with the --keyfile" +
             " option)")
     a.add_argument("--keyfile", "-k",
-        action = "store_true",
+        action="store_true",
         help="Interpret the apikey arg as the path to a single-line file" +
             " containing the key")
     args = a.parse_args()
     if args.keyfile:
+        ## Read the API key from the specified file
         try:
             with open(args.apikey) as f:
                 apikey = f.read().strip()
