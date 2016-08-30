@@ -4,6 +4,7 @@ Utilities for interacting with the re:dash API.
 
 import urllib2
 import json
+import argparse
 
 base_url = "https://sql.telemetry.mozilla.org/api/"
 
@@ -18,7 +19,6 @@ class RequestHandler:
     def __init__(self, user_api_key):
         self.user_api_key = user_api_key
 
-
     def api_get(self, *path):
         """ Generate a GET request with the specified path components.
             
@@ -32,7 +32,6 @@ class RequestHandler:
         r.add_header('Authorization', 'Key ' + self.user_api_key)
         fd = urllib2.urlopen(r)
         return json.load(fd)
-
 
     def api_post(self, d, *path):
         """ Generate a POST request with specified JSON data and path
@@ -55,7 +54,6 @@ class RequestHandler:
             raise
         return json.load(fd)
 
-
     def get_data_sources_by_name(self):
         """ Returns a mapping of known data sources keyed by name. """
         datasources = self.api_get("data_sources")
@@ -73,12 +71,48 @@ class RequestHandler:
         return dsmap
 
 
+class QuerySyncArgParser:
+    """ An arg parser preset with shared args that can load the API key from file. """
+    def __init__(self, description):
+        self.arg_parser = argparse.ArgumentParser(description=description)
+        self.arg_parser.add_argument("manifest",
+            metavar="manifest.yaml",
+            help="Path to YAML file specifying queries")
+        self.arg_parser.add_argument("apikey",
+            help="Your sql.telemetry.mozilla.org API key, either the key" +
+                " itself or a single-line file containing the key (with the" +
+                " --keyfile option)")
+        self.arg_parser.add_argument("--keyfile", "-k",
+            action="store_true",
+            help="Interpret the apikey arg as the path to a single-line file" +
+                " containing the key")
+
+    def add_argument(self, *args, **kwargs):
+        self.arg_parser.add_argument(*args, **kwargs)
+
+    def parse_args(self):
+        """ Parse and return the args, reading the API key from file if required.
+
+            Raises IOError if the key file could not be read.
+        """
+        args = self.arg_parser.parse_args()
+        if args.keyfile:
+            ## Read the API key from the specified file
+            try:
+                with open(args.apikey) as f:
+                    apikey = f.read().strip()
+                args.apikey = apikey
+            except IOError:
+                print("Unable to read API key from file.")
+                raise
+        return args
+
+
 def remove_vis_dates(v):
     """ Remove dates from the visualization description returned by the API. """
     del v["created_at"]
     del v["updated_at"]
     return v
-
 
 def format_vis_for_manifest(visualizations):
     """ Convert the visualization listing for a query returned by the API
@@ -92,9 +126,8 @@ def format_vis_for_manifest(visualizations):
     visualizations = map(remove_vis_dates, visualizations)
     return visualizations
 
-
 def block_multiline_string_representer(dumper, data):
-    """ Represent multi-line strings in block style.
+    """ Represent multi-line strings in block style when generating the YAML.
 
         CF http://stackoverflow.com/a/33300001
     """

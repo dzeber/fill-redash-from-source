@@ -1,11 +1,8 @@
 import sys, os, json
-import argparse
 import time
 import pprint
 import yaml
 import utils
-
-recheck_frequency = 1
 
 def check_or_update_list(query_ids, manifest_queries, handler):
     dsmap = handler.get_data_sources_by_id()
@@ -48,17 +45,11 @@ def check_or_update_list(query_ids, manifest_queries, handler):
         check_or_update_query(q)
     return manifest_queries
 
+
 if __name__ == "__main__":
-    a = argparse.ArgumentParser(description="Update or generate YAML" +
+    arg_parser = utils.QuerySyncArgParser("Update or generate YAML" +
         " manifest specifying re:dash (sql.telemetry.mozilla.org) queries")
-    a.add_argument("manifest",
-        metavar="manifest.yaml",
-        help="Path to YAML file specifying queries")
-    a.add_argument("apikey",
-        help="Your sql.telemetry.mozilla.org API key, either the key itself" +
-            " or a single-line file containing the key (with the --keyfile" +
-            " option)")
-    a.add_argument("query_ids",
+    arg_parser.add_argument("query_ids",
         nargs= "*",
         metavar="queryID",
         type=int,
@@ -66,20 +57,7 @@ if __name__ == "__main__":
             " is already listed in the manifest, its entry will get updated." +
             " Otherwise the query will be added to the file. If no queries" +
             " are specified, all queries in the manifest will be updated.")
-    a.add_argument("--keyfile", "-k",
-        action = "store_true",
-        help="Interpret the apikey arg as the path to a single-line file" +
-            " containing the key")
-    args = a.parse_args()
-    if args.keyfile:
-        ## Read the API key from the specified file
-        try:
-            with open(args.apikey) as f:
-                apikey = f.read().strip()
-            args.apikey = apikey
-        except IOError:
-            print("Unable to read API key from file.")
-            sys.exit(1)
+    args = arg_parser.parse_args()
 
     try:
         mf_queries = yaml.load(open(args.manifest))
