@@ -14,8 +14,9 @@ A tool to generate redash queries from a source-controlled, reviewable, pull-req
 
 ### To modify an existing query:
 
-* edit autogen.yaml with your changes
-* run `python autogen.py autogen.yaml *API_KEY*` using your API key from above
+* Edit autogen.yaml with your changes
+* Run `python autogen.py autogen.yaml API_KEY` using your API key from above
+    - Alternatively, if your API key is stored in a file (eg. `redash.key`), run `python autogen.py autogen.yaml -k redash.key`
 * Unless you are a re:dash admin, you will only be able to make changes to the queries that you created.
 
 ### To create a new query
@@ -31,6 +32,25 @@ This tool does not make brand-new queries. To create a new query, you create a d
 * Next to the save button is a hamburger menu which has a "Show API Key" menu item. Copy the query API key.
 * In `autogen.yaml`, create a new query definition using the query ID and query API key from above.
 * It may be useful to prototype the query text in the re:dash UI before copying it to the YAML.
+
+### To sync edits made to a query in the web interface
+
+* Edit the query and visualizations at https://sql.telemetry.mozilla.org/.
+* Execute and Save the query.
+* Look for the query ID in the URL: https://sql.telemetry.mozilla.org/queries/*id*/source.
+* Run `python update_manifest.py autogen.yaml API_KEY QUERY_ID`, or replace `API_KEY` with `-k KEY_FILE` if the API key is to be read from a file.
+* This can be used to automatically pull in information for a new query created as above.
+
+The `update_manifest.py` script operates as follows:
+
+* It can be called with one or more query IDs, or with no query IDs, and a YAML file path that may or may not exist.
+* If one or more query IDs are given, then for each of these:
+    - If a previous version of the query already exists in the YAML, it is updated.
+    - Otherwise it is appended.
+* If the YAML file does not yet exist, it is created and contains listings for each of the specified queries
+* If no query IDs are given, all queries listed in the manifest are updated (in this case, the YAML file must exist).
+* Query information that is synced includes the query code, ID, name, description, update schedule, as well as information about any visualizations (excluding the default table output, which is considered a "visualization" in re:dash).
+* __Note: the YAML file is overwritten.__
 
 ## About API Keys ##
 
