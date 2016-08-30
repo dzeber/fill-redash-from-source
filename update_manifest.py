@@ -57,7 +57,12 @@ if __name__ == "__main__":
             " is already listed in the manifest, its entry will get updated." +
             " Otherwise the query will be added to the file. If no queries" +
             " are specified, all queries in the manifest will be updated.")
-    args = arg_parser.parse_args()
+    try:
+        args = arg_parser.parse_args()
+    except IOError:
+        ## The key file was not readable, and a message was already printed.
+        print("Exiting...")
+        sys.exit(1)
 
     try:
         mf_queries = yaml.load(open(args.manifest))

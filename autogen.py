@@ -67,7 +67,12 @@ def check_or_update_list(queries, handler):
 if __name__ == "__main__":
     arg_parser = utils.QuerySyncArgParser(
         "Update sql.telemetry.mozilla.org queries")
-    args = arg_parser.parse_args()
+    try:
+        args = arg_parser.parse_args()
+    except IOError:
+        ## The key file was not readable, and a message was already printed.
+        print("Exiting...")
+        sys.exit(1)
 
     d = yaml.load(open(args.manifest))
     api_handler = utils.RequestHandler(args.apikey)
